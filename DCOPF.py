@@ -1,5 +1,4 @@
 # import libraries
-import networkx
 from pyomo.environ import *
 import numpy as np
 import scipy.io as readmat
@@ -16,15 +15,11 @@ test_case = '300'
 # degree to radian conversion factor
 deg_to_rad = math.pi / 180
 
-# extract the scenarios and their probabilities from external file
-scenario_file = dir_file + r"/scenario_files/failure_scenarios.mat"
-probability_file = dir_file + r"/scenario_files/scenario_probabilities_49.csv"
-
 # create a concrete pyomo model
 model = ConcreteModel()
 
 # load matpower test case in mat format
-matpower_mat_file = readmat.loadmat(dir_file + '/test_cases/case' + test_case + '.mat',
+matpower_mat_file = readmat.loadmat(dir_file + '/power_system_test_cases/case' + test_case + '.mat',
                                     struct_as_record=False,
                                     squeeze_me=True)
 # ensure that all the saved mat file are saved under workspace var name 'matpower_testcase'
@@ -48,12 +43,6 @@ model.Pbase = 100  # MVA base 100 MVA to convert the system to pu system
 Inf_transfer_Pmax = 10e6
 Pmax_line = 10e6/model.Pbase
 
-# # Pmax, Gmax, and max load for bounds set
-# if max(model.line[:, 7]) == 0:
-#     Pmax_line = Inf_transfer_Pmax / model.Pbase
-# else:
-#     Pmax_line = max(model.line[:, 7]) / model.Pbase
-
 Gmax = max(model.gen[:, 8]) / model.Pbase
 max_load = max(model.bus[:, 2]) / model.Pbase
 
@@ -76,10 +65,6 @@ model.bus_gen_ss = Var(model.b_i, bounds=(0, Gmax), within=Reals, initialize=0) 
 model.Pij_ss = Var(model.x_ij, bounds=(-Pmax_line, Pmax_line), within=Reals,
                    initialize=0)  # active power flowing through each lines
 model.theta_ss = Var(model.b_i, bounds=(-2 * math.pi, 2 * math.pi), within=Reals, initialize=0)  # angle of each bus
-
-# model.xij = Var(model.x_ij, bounds=(0,1), within=Binary, initialize=0)  # connectivity of each line
-# model.load_shed = Var(model.b_i, bounds=(0, max_load), within=Reals)  # real active power shed at each bus
-
 
 ###############################################################################################################
 ####################################### Constraints ###########################################################
@@ -180,22 +165,14 @@ slack_bus = np.where(model.bus[:, 1] == 3)[0][0]
 model.angle_limit.add(model.theta_ss[slack_bus] == 0)
 
 
-# ###################### max load shedding  ############################################
-# for load_bus_num in range(model.nNodes):
-#     model.c.add(model.load_shed[load_bus_num] >= 0)
-#     model.c.add(model.load_shed[load_bus_num] <= model.bus[load_bus_num, 2])
-
-
 ############################# Overall Objective ###########################
 
 def overall_objective(model):
-    expr = 0
     expr = sum(model.gen_cost[gen_num, 4] * (model.bus_gen_ss[np.where(model.bus[:, 0] == model.gen[gen_num, 0])[0][0]]
                                              * model.Pbase) ** 2 +
                model.gen_cost[gen_num, 5] * (model.bus_gen_ss[np.where(model.bus[:, 0] == model.gen[gen_num, 0])[0][0]]
                                              * model.Pbase) +
                model.gen_cost[gen_num, 6] for gen_num in range(model.nGen))
-    # expr = sum(model.load_shed[bus_num] for bus_num in range(model.nNodes))
     return expr
 
 
@@ -209,7 +186,6 @@ solver = SolverFactory('gurobi')
 results = solver.solve(model, tee=True)
 
 # Observing the results
-
 for k in range(0, model.nGen):
     print("G[%d] = %f" % (model.gen[k, 0], value(model.bus_gen_ss[np.where(model.bus[:, 0] ==
                                                                            model.gen[k, 0])[0][0]])))
