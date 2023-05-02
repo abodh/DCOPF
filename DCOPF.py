@@ -43,8 +43,8 @@ model.Pbase = 100  # MVA base 100 MVA to convert the system to pu system
 Inf_transfer_Pmax = 10e6
 Pmax_line = 10e6/model.Pbase
 
+# it is feasible to keep the max generation of each generator to be the max capacity of all generators
 Gmax = max(model.gen[:, 8]) / model.Pbase
-max_load = max(model.bus[:, 2]) / model.Pbase
 
 # variable ranges
 model.x_ij = range(0, model.nEdges)  # edges variable range
@@ -55,16 +55,15 @@ model.b_i = range(0, model.nNodes)  # buses variable range
 ###############################################################################################################
 
 # declaring pyomo variables
-
-# first we declare steady state variables i.e. power flow needs to be maintained while in the steady state
-# since these should be the same for all scenarios, they are first stage variables
-# they have ss at the end for representation
-
 # although bounds are mentioned here to maintain the standard, they will be redefined as per gen bus
-model.bus_gen_ss = Var(model.b_i, bounds=(0, Gmax), within=Reals, initialize=0)  # bus generation variable
-model.Pij_ss = Var(model.x_ij, bounds=(-Pmax_line, Pmax_line), within=Reals,
-                   initialize=0)  # active power flowing through each lines
-model.theta_ss = Var(model.b_i, bounds=(-2 * math.pi, 2 * math.pi), within=Reals, initialize=0)  # angle of each bus
+# bus generation variable
+model.bus_gen_ss = Var(model.b_i, bounds=(0, Gmax), within=Reals, initialize=0)
+
+# active power flowing through each lines
+model.Pij_ss = Var(model.x_ij, bounds=(-Pmax_line, Pmax_line), within=Reals, initialize=0)
+
+# angle of each bus
+model.theta_ss = Var(model.b_i, bounds=(-2 * math.pi, 2 * math.pi), within=Reals, initialize=0)
 
 ###############################################################################################################
 ####################################### Constraints ###########################################################
