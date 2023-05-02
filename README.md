@@ -22,4 +22,4 @@ Please make sure that you install and import the following packages
 1. `numpy`
 2. `scipy`
 3. `pyomo`
-4. 'Gurobi' or any other optimization solver
+4. `gurobi`/`cplex`/`glpk` or any other optimization solver
